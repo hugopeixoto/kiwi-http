@@ -5,7 +5,7 @@
  * Copyright (c) 2013 Hugo Peixoto.
  * Distributed under the MIT License.
  */
-#include "http/request.h"
+#include "kiwi/http/request.h"
 
 using kiwi::http::Request;
 

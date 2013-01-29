@@ -5,9 +5,9 @@
  * Copyright (c) 2013 Hugo Peixoto.
  * Distributed under the MIT License.
  */
-#include "http/server.h"
-#include "http/response.h"
-#include "http/parser.h"
+#include "kiwi/http/server.h"
+#include "kiwi/http/response.h"
+#include "kiwi/http/parser.h"
 
 #include <unistd.h>
 #include <stdlib.h>

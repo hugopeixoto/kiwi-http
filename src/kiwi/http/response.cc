@@ -5,7 +5,7 @@
  * Copyright (c) 2013 Hugo Peixoto.
  * Distributed under the MIT License.
  */
-#include "http/response.h"
+#include "kiwi/http/response.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>

@@ -5,8 +5,9 @@
  * Copyright (c) 2013 Hugo Peixoto.
  * Distributed under the MIT License.
  */
-#include "http/parser.h"
-#include "http/method.h"
+#include "kiwi/http/parser.h"
+#include "kiwi/http/method.h"
+#include "kiwi/http/helpers.h"
 
 #include "http_parser.h"
 
@@ -19,28 +20,6 @@ using kiwi::http::Parser;
  */
 #define SETTINGS() static_cast<http_parser_settings*>(settings_)
 #define PARSER() static_cast<http_parser*>(parser_)
-
-static std::string extract_query_string (const std::string& a_uri, std::map<std::string, std::string>& a_params);
-static void extract_params (const std::string& a_uri, std::map<std::string, std::string>& a_params);
-
-char hex_value[] = {
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1,  1,  2,  3,  4,  5,  6,  7,  8,  9, -1, -1, -1, -1, -1, -1,
-  -1,0xA,0xB,0xC,0xD,0xE, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-  -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-};
 
 typedef int (*http_data_cb) (http_parser*, const char *at, size_t length);
 typedef int (*http_cb) (http_parser*);
@@ -168,7 +147,7 @@ int Parser::on_message_begin ()
 int Parser::on_message_complete ()
 {
   if (buffer_.size() > 0) {
-    extract_params(buffer_, current_request().params);
+    Helpers::parse_query_string(buffer_, current_request().params);
     if (current_request().params.has_key("_method")) {
       std::string method = current_request().params["_method"];
       if (method == "PUT") {
@@ -191,7 +170,12 @@ int Parser::on_headers_complete ()
   add_header();
 
   // extract query string from URL
-  current_request().uri().assign(extract_query_string(current_request().uri(), current_request().params));
+  Helpers::parse_query_string(
+    Helpers::query_string(current_request().uri()),
+    current_request().params);
+
+  current_request().uri().assign(
+    Helpers::without_query_string(current_request().uri()));
 
   current_request().set_keepalive(http_should_keep_alive(PARSER()));
 
@@ -257,68 +241,6 @@ void Parser::add_header ()
     header_field_.resize(0);
     header_value_.resize(0);
   }
+
 }
-
-std::string Parser::percent_decode (const std::string& a_string)
-{
-  std::string result;
-  result.reserve(a_string.size());
-
-  for (size_t i = 0; i < a_string.size(); ++i) {
-    if (a_string[i] == '%' &&
-        (i + 2) < a_string.size() &&
-        hex_value[a_string[i+1]] >= 0 &&
-        hex_value[a_string[i+2]] >= 0) {
-      result += (hex_value[a_string[i + 1]] << 4) | (hex_value[a_string[i + 2]]);
-      i += 2;
-    } else {
-      result += a_string[i];
-    }
-  }
-
-  return result;
-}
-
-std::string extract_query_string (
-    const std::string& a_uri,
-    std::map<std::string, std::string>& a_params)
-{
-  uint32_t abs_path = 0;
-  for (; abs_path < a_uri.size(); ++abs_path) {
-    if (a_uri[abs_path] == '?')
-    break;
-  }
-
-  if (abs_path != a_uri.size()) {
-    extract_params(a_uri.substr(abs_path), a_params);
-  }
-
-  return a_uri.substr(0, abs_path);
-}
-
-void extract_params(const std::string& a_urlencoded, std::map<std::string, std::string>& a_params)
-{
-  for (size_t i = 0; i < a_urlencoded.size();) {
-    size_t j = a_urlencoded.find_first_of("&=", i);
-    if (j == std::string::npos) {
-      a_params[Parser::percent_decode(a_urlencoded.substr(i))] = "";
-      i = a_urlencoded.size();
-    } else {
-      if (a_urlencoded[j] == '&') {
-        a_params[Parser::percent_decode(a_urlencoded.substr(i, j - i))] = "";
-        i = j + 1;
-      } else {
-        size_t k = a_urlencoded.find_first_of("&", j + 1);
-        if (k == std::string::npos) {
-          a_params[Parser::percent_decode(a_urlencoded.substr(i, j - i))] = Parser::percent_decode(a_urlencoded.substr(j + 1));
-          i = a_urlencoded.size();
-        } else {
-          a_params[Parser::percent_decode(a_urlencoded.substr(i, j - i))] = Parser::percent_decode(a_urlencoded.substr(j + 1, k - (j + 1)));
-          i = k + 1;
-        }
-      }
-    }
-  }
-}
-
 
