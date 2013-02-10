@@ -54,8 +54,6 @@ int Response::body_chunk (const char* a_buffer, size_t a_size)
 {
   char chunk_size[8 + 2];
 
-  printf("BodyChunk: %d [%.*s]\n", (int)a_size, a_size, a_buffer);
-
   for (int i = 0; i < 8; ++i) {
     uint8_t nibble = (a_size >> ((8 - 1 - i) * 4)) & 0xF;
     chunk_size[i] = (nibble < 0xA ? '0' : 'A' - 10) + nibble;
