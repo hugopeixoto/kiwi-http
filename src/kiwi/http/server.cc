@@ -61,6 +61,14 @@ struct Server::Implementation {
       }
     }
   }
+
+  ~Implementation () {
+    for (uint32_t i = 0; i < MAX_CONNECTIONS; ++i) {
+      if (connections[i].in_use()) {
+        connections[i].close();
+      }
+    }
+  }
 };
 
 Server::Server ()
@@ -96,6 +104,7 @@ Server::~Server ()
 {
   close(data->server_fd);
   delete[] data->buffer;
+  delete data;
 }
 
 bool Server::close (uint32_t a_idx)
