@@ -42,14 +42,14 @@ void send (int sock, const std::string& a_text)
   send(sock, a_text.c_str(), a_text.size(), 0);
 }
 
-std::string receive (int sock, int bytes)
+std::string receive (int sock)
 {
-  char* buffer = new char[bytes];
-  int r = recv(sock, buffer, bytes, 0);
+  std::string body;
+  char buffer[1024];
 
-  std::string ret(buffer, r);
-  delete[] buffer;
-  return ret;
+  for (int r = 0; (r = recv(sock, buffer, 1024, 0)); body += std::string(buffer, r));
+
+  return body;
 }
 
 
@@ -152,7 +152,7 @@ TEST(KiwiHttpServer, ShouldSendHTTPResponse)
     int sock = connect(10008);
     send(sock, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
 
-    body = receive(sock, 1024);
+    body = receive(sock);
     close(sock);
   });
 
@@ -193,7 +193,7 @@ TEST(KiwiHttpServer, ShouldHandleMoreThanOneClient)
     int sock = connect(10009);
     send(sock, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
 
-    body1 = receive(sock, 1024);
+    body1 = receive(sock);
     close(sock);
   });
 
@@ -201,7 +201,7 @@ TEST(KiwiHttpServer, ShouldHandleMoreThanOneClient)
     int sock = connect(10009);
     send(sock, "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n");
 
-    body2 = receive(sock, 1024);
+    body2 = receive(sock);
     close(sock);
   });
 
