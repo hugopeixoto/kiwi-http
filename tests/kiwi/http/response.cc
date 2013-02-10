@@ -8,11 +8,11 @@
 #include "gtest/gtest.h"
 #include "kiwi/http/response.h"
 
-class Response : public kiwi::http::X {
+class Response : public kiwi::http::CallbackStream {
   public:
   Response ()
   {
-    X::callback = [this](const char* a_buffer, size_t a_size) -> int {
+    CallbackStream::callback = [this](const char* a_buffer, size_t a_size) -> int {
       buffer += std::string(a_buffer, a_size);
       return a_size;
     };
