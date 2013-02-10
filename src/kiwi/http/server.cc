@@ -81,22 +81,32 @@ Server::Server ()
 
 bool Server::construct (uint16_t a_port)
 {
-  int reuseaddr = 1;
   sockaddr_in server;
 
   data->server_fd = socket(AF_INET, SOCK_STREAM, 0);
-  if (data->server_fd < 0) return false;
+  if (data->server_fd < 0) {
+    return false;
+  }
 
   data->recalc();
 
-  setsockopt(data->server_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
+  {
+    int reuseaddr = 1;
+    setsockopt(data->server_fd, SOL_SOCKET, SO_REUSEADDR, &reuseaddr, sizeof(reuseaddr));
+  }
 
   server.sin_family = AF_INET;
   server.sin_port = htons(a_port);
   server.sin_addr.s_addr = INADDR_ANY;
 
-  if (bind(data->server_fd, (sockaddr*)&server, sizeof(server)) != 0) return false;
-  if (listen(data->server_fd, Implementation::MAX_CONNECTIONS) != 0) return false;
+  if (bind(data->server_fd, (sockaddr*)&server, sizeof(server)) != 0) {
+    return false;
+  }
+
+  if (listen(data->server_fd, Implementation::MAX_CONNECTIONS) != 0) {
+    return false;
+  }
+
   return true;
 }
 
@@ -196,7 +206,6 @@ bool Server::receive (uint32_t a_idx)
   }
 
   if (data->connections[a_idx].parser.feed(data->buffer, received) == false) {
-    printf("false parsing\n");
     close(a_idx);
     return true;
   }
