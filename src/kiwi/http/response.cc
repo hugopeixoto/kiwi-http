@@ -21,7 +21,7 @@ void Response::start_body ()
     "Transfer-Encoding: chunked\r\n"
     "\r\n";
 
-  send(fd_, msg, sizeof(msg) - 1, 0);
+  send(fd_, msg, sizeof(msg) - 1, MSG_NOSIGNAL);
 }
 
 void Response::finish_body ()
@@ -29,7 +29,7 @@ void Response::finish_body ()
   static const char msg[] = "0\r\n\r\n";
 
   sync();
-  send(fd_, msg, sizeof(msg) - 1, 0);
+  send(fd_, msg, sizeof(msg) - 1, MSG_NOSIGNAL);
 }
 
 int Response::body_chunk (const char* a_buffer, size_t a_size)
@@ -47,9 +47,9 @@ int Response::body_chunk (const char* a_buffer, size_t a_size)
   chunk_size[8] = '\r';
   chunk_size[8+1] = '\n';
 
-  send(fd_, chunk_size + j, sizeof(chunk_size) - j, 0);
-  send(fd_, a_buffer, a_size, 0);
-  send(fd_, "\r\n", 2, 0);
+  send(fd_, chunk_size + j, sizeof(chunk_size) - j, MSG_NOSIGNAL);
+  send(fd_, a_buffer, a_size, MSG_NOSIGNAL);
+  send(fd_, "\r\n", 2, MSG_NOSIGNAL);
   return 0;
 }
 
