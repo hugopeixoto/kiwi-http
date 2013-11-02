@@ -1,0 +1,6 @@
+[submodule "ext/googletest"]
+	path = ext/googletest
+	url = https://github.com/hugopeixoto/googletest
+[submodule "ext/http-parser"]
+	path = ext/http-parser
+	url = https://github.com/hugopeixoto/http-parser
