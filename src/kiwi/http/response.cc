@@ -6,30 +6,35 @@
  * Distributed under the MIT License.
  */
 #include "kiwi/http/response.h"
+#include "kiwi/http/network_output_stream.h"
 
-#include <sys/types.h>
-#include <sys/socket.h>
 #include <stdint.h>
+#include <string.h>
 
-using kiwi::http::CallbackStream;
 using kiwi::http::Response;
+using kiwi::http::NetworkOutputStream;
 
 Response::Response ()
 {
-  CallbackStream::callback = [this](const char* a_buffer, size_t a_size) -> int {
-    return this->body_chunk(a_buffer, a_size);
+  chunked = false;
+  output_ = new NetworkOutputStream();
+
+  CallbackStream::callback = [this](const char* a_buffer, size_t a_size) {
+    if (this->chunked) {
+      return this->body_chunk(a_buffer, a_size);
+    } else {
+      return this->send(a_buffer, a_size);
+    }
   };
 }
 
-int Response::socket () const
+Response::~Response ()
 {
-  return fd_;
+  delete output_;
 }
 
-void Response::set_socket (int a_file_descriptor)
-{
-  fd_ = a_file_descriptor;
-}
+// HTTP methods
+// high level helpers
 
 void Response::start_body ()
 {
@@ -39,7 +44,8 @@ void Response::start_body ()
     "Transfer-Encoding: chunked\r\n"
     "\r\n";
 
-  send(fd_, msg, sizeof(msg) - 1, MSG_NOSIGNAL);
+  send(msg, sizeof(msg) - 1);
+  chunked = true;
 }
 
 void Response::finish_body ()
@@ -47,7 +53,9 @@ void Response::finish_body ()
   static const char msg[] = "0\r\n\r\n";
 
   finish();
-  send(fd_, msg, sizeof(msg) - 1, MSG_NOSIGNAL);
+  if (chunked) {
+    send(msg, sizeof(msg) - 1);
+  }
 }
 
 int Response::body_chunk (const char* a_buffer, size_t a_size)
@@ -65,59 +73,39 @@ int Response::body_chunk (const char* a_buffer, size_t a_size)
   chunk_size[8] = '\r';
   chunk_size[8+1] = '\n';
 
-  send(fd_, chunk_size + j, sizeof(chunk_size) - j, MSG_NOSIGNAL);
-  send(fd_, a_buffer, a_size, MSG_NOSIGNAL);
-  send(fd_, "\r\n", 2, MSG_NOSIGNAL);
+  send(chunk_size + j, sizeof(chunk_size) - j);
+  send(a_buffer, a_size);
+  send("\r\n", 2);
   return 0;
 }
 
-// Callback Stream helper
-//
-//
-
-CallbackStream::CallbackStream ()
-: std::ostream(static_cast<std::streambuf*>(this)), std::ios(0)
+void Response::redirect_to (const char* a_new_location)
 {
-  clear();
+  static const char prefix[] = "HTTP/1.1 301 Moved Permanently\r\nLocation: ";
+  static const char suffix[] = "\r\n\r\n";
+
+  send(prefix, sizeof(prefix) - 1);
+  send(a_new_location, strlen(a_new_location));
+  send(suffix, sizeof(suffix) - 1);
 }
 
-CallbackStream::~CallbackStream ()
+void Response::set_socket (int a_socket)
 {
-  finish();
+  output_->set_socket(a_socket);
 }
 
-void CallbackStream::finish ()
+int Response::socket () const
 {
-  sync();
-  clear();
+  return output_->socket();
 }
 
-void CallbackStream::clear ()
+NetworkOutputStream* Response::output ()
 {
-  setp(buffer_, buffer_ + sizeof(buffer_) - 1);
+  return output_;
 }
 
-std::streambuf::int_type CallbackStream::overflow (std::streambuf::int_type ch)
+int Response::send (const char* a_buffer, size_t a_size)
 {
-  char* end = pptr();
-  if (ch != std::streambuf::traits_type::eof()) {
-    *end = ch;
-    ++end;
-  }
-
-  if (callback(pbase(), end - pbase()) == -1) {
-    ch = std::streambuf::traits_type::eof();
-  } else {
-    ch = 0;
-  }
-
-  clear();
-
-  return ch;
-}
-
-std::streambuf::int_type CallbackStream::sync ()
-{
-  return (pptr() == pbase() || callback(pbase(), pptr() - pbase()) != -1) ? 0 : -1;
+  return output()->send(a_buffer, a_size);
 }
 

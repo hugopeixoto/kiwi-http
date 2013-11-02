@@ -9,44 +9,33 @@
 #define KIWI_HTTP_RESPONSE_H_
 
 #include <stdlib.h>
-#include <sstream>
-#include <functional>
+#include "kiwi/http/callback_stream.h"
 
 namespace kiwi {
   namespace http {
-    class CallbackStream : private std::streambuf, public std::ostream {
-      public:
-      typedef std::function<int(const char*, size_t)> Callback;
-      CallbackStream ();
-      ~CallbackStream ();
-
-      void finish ();
-
-      protected:
-      // std::streambuf implementation
-      std::streambuf::int_type overflow (std::streambuf::int_type c);
-      std::streambuf::int_type sync ();
-      void clear ();
-
-      char buffer_[4096];
-
-      Callback callback;
-    };
+    class NetworkOutputStream;
 
     class Response : public CallbackStream {
       public:
       Response ();
+      ~Response ();
 
-      void set_socket (int a_file_descriptor);
-
-      int socket () const;
-
+      // High level HTTP helpers
       void start_body ();
       void finish_body ();
       int body_chunk (const char* a_buffer, size_t a_size);
 
+      void redirect_to (const char* a_new_location);
+
+      void set_socket (int a_socket);
+      int socket () const;
+
       protected:
-      int fd_;
+      NetworkOutputStream* output ();
+      int send (const char* a_buffer, size_t a_size);
+
+      bool chunked;
+      NetworkOutputStream* output_;
     };
   }
 }
