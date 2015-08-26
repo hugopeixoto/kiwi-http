@@ -1,0 +1,2 @@
+joyent-httpparser https://github.com/hugopeixoto/http-parser.git
+google-test https://github.com/hugopeixoto/googletest.git
