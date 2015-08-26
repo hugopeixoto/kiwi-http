@@ -36,9 +36,9 @@ std::string Helpers::percent_decode (const std::string& a_string)
   for (size_t i = 0; i < a_string.size(); ++i) {
     if (a_string[i] == '%' &&
         (i + 2) < a_string.size() &&
-        hex_value[a_string[i+1]] >= 0 &&
-        hex_value[a_string[i+2]] >= 0) {
-      result += (hex_value[a_string[i + 1]] << 4) | (hex_value[a_string[i + 2]]);
+        hex_value[(uint8_t)a_string[i+1]] >= 0 &&
+        hex_value[(uint8_t)a_string[i+2]] >= 0) {
+      result += (hex_value[(uint8_t)a_string[i + 1]] << 4) | (hex_value[(uint8_t)a_string[i + 2]]);
       i += 2;
     } else {
       result += a_string[i];

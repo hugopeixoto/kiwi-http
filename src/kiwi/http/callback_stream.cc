@@ -14,7 +14,7 @@
 using kiwi::http::CallbackStream;
 
 CallbackStream::CallbackStream ()
-: std::ostream(static_cast<std::streambuf*>(this)), std::ios(0)
+: std::ios(0), std::ostream(static_cast<std::streambuf*>(this))
 {
   clear();
 }
@@ -58,4 +58,3 @@ std::streambuf::int_type CallbackStream::sync ()
 {
   return (pptr() == pbase() || callback(pbase(), pptr() - pbase()) != -1) ? 0 : -1;
 }
-
