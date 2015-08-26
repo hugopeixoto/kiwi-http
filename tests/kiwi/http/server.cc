@@ -9,16 +9,16 @@
 #include "kiwi/http/server.h"
 #include "kiwi/http/response.h"
 
-#include <unistd.h>                                                   
+#include <unistd.h>
 #include <stdlib.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/select.h>
 #include <netinet/in.h>
-#include <netinet/ip.h> /* superset of previous */          
-#include <netinet/tcp.h>                
-#include <assert.h>     
+#include <netinet/ip.h> /* superset of previous */
+#include <netinet/tcp.h>
+#include <assert.h>
 
 #include <thread>
 
